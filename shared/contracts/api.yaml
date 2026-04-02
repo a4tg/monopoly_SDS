@@ -1,0 +1,17 @@
+openapi: 3.0.3
+info:
+  title: Monopoly SDS API
+  version: 0.1.0
+paths:
+  /auth/login:
+    post:
+      summary: Player/Admin login
+  /game/state:
+    get:
+      summary: Current player state
+  /game/roll:
+    post:
+      summary: Roll dice and apply cell event
+  /admin/participants:
+    get:
+      summary: List participants for monitoring
