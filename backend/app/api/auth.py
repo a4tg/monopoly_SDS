@@ -21,7 +21,7 @@ from app.core.security import (
     normalize_phone,
     verify_password,
 )
-from app.core.tokens import pick_random_token_asset
+from app.core.tokens import DEFAULT_TOKEN_ASSET, pick_random_token_asset
 from app.db.session import get_db
 from app.models import PasswordResetToken, PlayerNotification, User, UserRole
 from app.schemas.auth import (
@@ -77,12 +77,13 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenRe
             raise HTTPException(status_code=400, detail="User with this phone already exists")
 
     role = UserRole.ADMIN if payload.role == "admin" else UserRole.PLAYER
+    token_asset = pick_random_token_asset() if role == UserRole.PLAYER else DEFAULT_TOKEN_ASSET
     user = User(
         email=email,
         phone=phone,
         password=hash_password(payload.password),
         role=role,
-        token_asset=pick_random_token_asset(),
+        token_asset=token_asset,
     )
     db.add(user)
     db.commit()

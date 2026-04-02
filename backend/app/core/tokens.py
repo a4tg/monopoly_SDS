@@ -7,10 +7,6 @@ TOKEN_ASSETS = [
     "token-02.png",
     "token-03.png",
     "token-04.png",
-    "token-05.png",
-    "token-06.png",
-    "token-07.png",
-    "token-08.png",
 ]
 
 DEFAULT_TOKEN_ASSET = TOKEN_ASSETS[0]

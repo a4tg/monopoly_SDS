@@ -290,6 +290,9 @@ export default function GamePage() {
   }, [state]);
 
   const boardSize = state?.session.board_size ?? 40;
+  const cellCount = orderedCells.length;
+  const visibleBoardSize = Math.max(1, Math.min(cellCount || boardSize, PERIMETER_SLOTS.length));
+  const visibleSlots = useMemo(() => PERIMETER_SLOTS.slice(0, visibleBoardSize), [visibleBoardSize]);
 
   const cellsByIndex = useMemo(() => {
     const map = new Map<number, (typeof orderedCells)[number]>();
@@ -345,14 +348,14 @@ export default function GamePage() {
 
       const result = await roll(token);
       const landed = result.landed_cell as { id: number; title: string; stock: number } | null;
-      const path = movementPath(result.from_position, result.to_position, boardSize);
+      const path = movementPath(result.from_position, result.to_position, visibleBoardSize);
 
       setLastCellId(landed?.id ?? null);
       setLastRoll(result.rolled);
       setTrail(path);
       setAnimatedPosition(result.from_position);
       setPendingPosition(result.to_position);
-      setMessage(`Бросок: ${result.rolled}. Позиция ${result.from_position} -> ${result.to_position}.`);
+      setMessage(`Бросок: ${result.rolled}. Позиция ${result.from_position + 1} -> ${result.to_position + 1}.`);
       setState((prev) => {
         if (!prev) return prev;
         return {
@@ -461,7 +464,7 @@ export default function GamePage() {
           </div>
           <div className="kpi-card">
             <div className="kpi-label">Позиция</div>
-            <div className="kpi-value">{shownPosition}</div>
+            <div className="kpi-value">{shownPosition + 1}</div>
           </div>
           <div className="kpi-card">
             <div className="kpi-label">Баланс</div>
@@ -539,9 +542,8 @@ export default function GamePage() {
                 )}
               </div>
             </div>
-            {PERIMETER_SLOTS.map(({ row, col, slot }) => {
-              const inBoard = slot < boardSize;
-              const cell = inBoard ? cellsByIndex.get(slot) ?? null : null;
+            {visibleSlots.map(({ row, col, slot }) => {
+              const cell = cellsByIndex.get(slot) ?? null;
               const isCurrent = slot === shownPosition;
               const trailIdx = trail.indexOf(slot);
               const isTrail = trailIdx >= 0 && !isCurrent;
@@ -555,7 +557,7 @@ export default function GamePage() {
                       delete cellRefs.current[slot];
                     }
                   }}
-                  className={`cell monopoly-cell ${slotClass(slot)} ${inBoard ? "" : "offboard"} ${cell ? "" : "empty"} ${isCurrent ? "active" : ""} ${isTrail ? "trail" : ""}`}
+                  className={`cell monopoly-cell ${slotClass(slot)} ${cell ? "" : "empty"} ${isCurrent ? "active" : ""} ${isTrail ? "trail" : ""}`}
                   onClick={() => {
                     if (cell) setSelectedCellSlot(slot);
                   }}
@@ -569,7 +571,7 @@ export default function GamePage() {
                     {cell ? (
                       <>
                         <div className="cell-head">
-                          <span>#{cell.cell_index}</span>
+                          <span>#{cell.cell_index + 1}</span>
                           <span className={`badge ${cell.status === "active" ? "reward_points" : "penalty_points"}`}>
                             {cell.status === "active" ? "Активна" : "Пусто"}
                           </span>
@@ -590,7 +592,7 @@ export default function GamePage() {
                       </>
                     ) : (
                       <>
-                        <div className="cell-empty-label">{inBoard ? `#${slot}` : "—"}</div>
+                        <div className="cell-empty-label">#{slot + 1}</div>
                         <div className="token-lane">
                           {isCurrent && (
                             <Token
@@ -659,7 +661,7 @@ export default function GamePage() {
         <div className="modal-overlay" onClick={() => setSelectedCellSlot(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>
-              #{selectedCell.cell_index} {selectedCell.title}
+              #{selectedCell.cell_index + 1} {selectedCell.title}
             </h3>
             {selectedCell.image_url && <img className="modal-cell-image" src={selectedCell.image_url} alt={selectedCell.title} />}
             <p>

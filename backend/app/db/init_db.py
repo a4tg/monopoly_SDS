@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.core.tokens import TOKEN_ASSETS
+from app.core.tokens import pick_random_token_asset
 from app.db.base import Base
 from app.db.session import engine
 from app.models import SecretShopItem, User, UserRole
@@ -23,7 +23,7 @@ def seed_demo_data(db: Session) -> None:
                     phone="+79990000002",
                     password=hash_password("player"),
                     role=UserRole.PLAYER,
-                    token_asset=TOKEN_ASSETS[1],
+                    token_asset=pick_random_token_asset(),
                 ),
             ]
         )
