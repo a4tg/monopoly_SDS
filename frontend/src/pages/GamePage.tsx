@@ -13,7 +13,7 @@ import { useAuthStore } from "../store/authStore";
 
 type CubeRotation = { x: number; y: number };
 type Point = { x: number; y: number };
-type PerimeterSlot = { row: number; col: number; slot: number };
+type PerimeterSlot = { row: number; col: number; slot: number; className: string };
 
 const FACE_TO_ROTATION: Record<number, CubeRotation> = {
   1: { x: 0, y: 0 },
@@ -34,23 +34,60 @@ const FACE_PIPS: Record<number, number[]> = {
 };
 
 const tokenSrcCache = new Map<string, string>();
-const PERIMETER_SLOTS: PerimeterSlot[] = [
-  { row: 10, col: 10, slot: 0 },
-  ...Array.from({ length: 9 }, (_, i) => ({ row: 10, col: 9 - i, slot: i + 1 })),
-  { row: 10, col: 0, slot: 10 },
-  ...Array.from({ length: 9 }, (_, i) => ({ row: 9 - i, col: 0, slot: i + 11 })),
-  { row: 0, col: 0, slot: 20 },
-  ...Array.from({ length: 9 }, (_, i) => ({ row: 0, col: i + 1, slot: i + 21 })),
-  { row: 0, col: 10, slot: 30 },
-  ...Array.from({ length: 9 }, (_, i) => ({ row: i + 1, col: 10, slot: i + 31 })),
-];
 
-function slotClass(slot: number): string {
-  if (slot % 10 === 0) return "corner";
-  if (slot >= 1 && slot <= 9) return "edge-bottom";
-  if (slot >= 11 && slot <= 19) return "edge-left";
-  if (slot >= 21 && slot <= 29) return "edge-top";
+function getSlotClass(row: number, col: number, edgeSpan: number): string {
+  const isCorner = (row === 0 || row === edgeSpan) && (col === 0 || col === edgeSpan);
+  if (isCorner) return "corner";
+  if (row === edgeSpan) return "edge-bottom";
+  if (col === 0) return "edge-left";
+  if (row === 0) return "edge-top";
   return "edge-right";
+}
+
+function buildPerimeterSlots(totalSlots: number): { slots: PerimeterSlot[]; gridSize: number } {
+  const count = Math.max(1, totalSlots);
+  const edgeSpan = Math.max(1, Math.ceil(count / 4));
+  const full: Array<{ row: number; col: number; className: string }> = [];
+
+  full.push({ row: edgeSpan, col: edgeSpan, className: "corner" });
+  for (let i = 1; i < edgeSpan; i += 1) {
+    const row = edgeSpan;
+    const col = edgeSpan - i;
+    full.push({ row, col, className: getSlotClass(row, col, edgeSpan) });
+  }
+  full.push({ row: edgeSpan, col: 0, className: "corner" });
+  for (let i = 1; i < edgeSpan; i += 1) {
+    const row = edgeSpan - i;
+    const col = 0;
+    full.push({ row, col, className: getSlotClass(row, col, edgeSpan) });
+  }
+  full.push({ row: 0, col: 0, className: "corner" });
+  for (let i = 1; i < edgeSpan; i += 1) {
+    const row = 0;
+    const col = i;
+    full.push({ row, col, className: getSlotClass(row, col, edgeSpan) });
+  }
+  full.push({ row: 0, col: edgeSpan, className: "corner" });
+  for (let i = 1; i < edgeSpan; i += 1) {
+    const row = i;
+    const col = edgeSpan;
+    full.push({ row, col, className: getSlotClass(row, col, edgeSpan) });
+  }
+
+  const fullLength = full.length;
+  const slots: PerimeterSlot[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const idx = Math.floor((i * fullLength) / count);
+    const pos = full[idx] ?? full[0];
+    slots.push({
+      row: pos.row,
+      col: pos.col,
+      slot: i,
+      className: pos.className,
+    });
+  }
+
+  return { slots, gridSize: edgeSpan + 1 };
 }
 
 function movementPath(from: number, to: number, total: number): number[] {
@@ -291,8 +328,11 @@ export default function GamePage() {
 
   const boardSize = state?.session.board_size ?? 40;
   const cellCount = orderedCells.length;
-  const visibleBoardSize = Math.max(1, Math.min(cellCount || boardSize, PERIMETER_SLOTS.length));
-  const visibleSlots = useMemo(() => PERIMETER_SLOTS.slice(0, visibleBoardSize), [visibleBoardSize]);
+  const visibleBoardSize = Math.max(1, cellCount || boardSize);
+  const { slots: visibleSlots, gridSize: boardGridSize } = useMemo(
+    () => buildPerimeterSlots(visibleBoardSize),
+    [visibleBoardSize],
+  );
 
   const cellsByIndex = useMemo(() => {
     const map = new Map<number, (typeof orderedCells)[number]>();
@@ -440,6 +480,9 @@ export default function GamePage() {
     "--cube-x": `${cubeRotation.x}deg`,
     "--cube-y": `${cubeRotation.y}deg`,
   } as CSSProperties;
+  const boardStyle = {
+    "--board-grid": `${boardGridSize}`,
+  } as CSSProperties;
 
   return (
     <section className="stack-lg">
@@ -521,7 +564,7 @@ export default function GamePage() {
               <Token tokenAsset={state.player.token_asset} />
             </div>
           )}
-          <div className="grid-board monopoly-board">
+          <div className="grid-board monopoly-board" style={boardStyle}>
             <div className="board-center">
               <div className="board-center-inner">
                 <img
@@ -542,7 +585,7 @@ export default function GamePage() {
                 )}
               </div>
             </div>
-            {visibleSlots.map(({ row, col, slot }) => {
+            {visibleSlots.map(({ row, col, slot, className }) => {
               const cell = cellsByIndex.get(slot) ?? null;
               const isCurrent = slot === shownPosition;
               const trailIdx = trail.indexOf(slot);
@@ -557,7 +600,7 @@ export default function GamePage() {
                       delete cellRefs.current[slot];
                     }
                   }}
-                  className={`cell monopoly-cell ${slotClass(slot)} ${cell ? "" : "empty"} ${isCurrent ? "active" : ""} ${isTrail ? "trail" : ""}`}
+                  className={`cell monopoly-cell ${className} ${cell ? "" : "empty"} ${isCurrent ? "active" : ""} ${isTrail ? "trail" : ""}`}
                   onClick={() => {
                     if (cell) setSelectedCellSlot(slot);
                   }}
