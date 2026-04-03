@@ -21,7 +21,7 @@ from app.core.security import (
     normalize_phone,
     verify_password,
 )
-from app.core.tokens import DEFAULT_TOKEN_ASSET, pick_random_token_asset
+from app.core.tokens import DEFAULT_TOKEN_ASSET, normalize_token_asset, pick_random_token_asset
 from app.db.session import get_db
 from app.models import PasswordResetToken, PlayerNotification, User, UserRole
 from app.schemas.auth import (
@@ -132,14 +132,17 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
 
 @router.get("/me", response_model=MeResponse)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MeResponse:
-    del db
+    normalized_token = normalize_token_asset(user.token_asset)
+    if normalized_token != user.token_asset:
+        user.token_asset = normalized_token
+        db.commit()
     identifier = user.email or user.phone or f"user-{user.id}"
     return MeResponse(
         id=user.id,
         email=user.email,
         phone=user.phone,
         identifier=identifier,
-        token_asset=user.token_asset,
+        token_asset=normalized_token,
         role=user.role.value,
     )
 

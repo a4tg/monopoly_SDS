@@ -14,7 +14,7 @@ def _slot_minutes(slot: dict) -> tuple[int, int] | None:
 
 def is_now_in_roll_window(roll_window_config: list[dict], now: datetime) -> bool:
     if not roll_window_config:
-        return False
+        return True
 
     weekday = now.weekday()  # 0=Mon
     now_minutes = now.hour * 60 + now.minute
@@ -40,6 +40,9 @@ def get_current_roll_slot_key(roll_window_config: list[dict], now: datetime) -> 
     weekday = now.weekday()
     now_minutes = now.hour * 60 + now.minute
     date_key = now.strftime("%Y-%m-%d")
+
+    if not roll_window_config:
+        return f"{date_key}:all-day"
 
     for idx, slot in enumerate(roll_window_config):
         days = slot.get("days", [])

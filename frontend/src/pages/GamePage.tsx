@@ -34,6 +34,13 @@ const FACE_PIPS: Record<number, number[]> = {
 };
 
 const tokenSrcCache = new Map<string, string>();
+const assetBasePath = import.meta.env.BASE_URL || "/";
+
+function assetUrl(path: string): string {
+  const normalized = path.replace(/^\/+/, "");
+  const base = assetBasePath.endsWith("/") ? assetBasePath : `${assetBasePath}/`;
+  return `${base}${normalized}`;
+}
 
 function getSlotClass(row: number, col: number, edgeSpan: number): string {
   const isCorner = (row === 0 || row === edgeSpan) && (col === 0 || col === edgeSpan);
@@ -124,12 +131,12 @@ function Token({
   ghost?: boolean;
   variant?: "cell" | "preview";
 }) {
-  const [imgSrc, setImgSrc] = useState(`/assets/tokens/${tokenAsset}`);
+  const [imgSrc, setImgSrc] = useState(assetUrl(`assets/tokens/${tokenAsset}`));
   const [imgBroken, setImgBroken] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    const source = `/assets/tokens/${tokenAsset}`;
+    const source = assetUrl(`assets/tokens/${tokenAsset}`);
     setImgBroken(false);
 
     const cached = tokenSrcCache.get(source);
@@ -569,7 +576,7 @@ export default function GamePage() {
               <div className="board-center-inner">
                 <img
                   className="board-logo-image"
-                  src="/assets/logo/company-logo.png"
+                  src={assetUrl("assets/logo/company-logo.png")}
                   alt="Логотип компании"
                   style={{ display: isBoardLogoMissing ? "none" : "block" }}
                   onLoad={() => setIsBoardLogoMissing(false)}

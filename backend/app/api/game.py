@@ -40,6 +40,7 @@ from app.schemas.game import (
     TradeOfferCreateRequest,
     TradeOfferRespondRequest,
 )
+from app.core.tokens import normalize_token_asset
 from app.services.balance import add_balance_event, get_player_balance
 from app.services.game_engine import roll_d6
 from app.services.roll_window import get_current_roll_slot_key
@@ -254,6 +255,9 @@ def game_state(user: User = Depends(get_current_user), db: Session = Depends(get
         .where(SecretShopPurchase.user_id == user.id, SecretShopPurchase.purchase_month == month_key)
     ).scalar_one()
 
+    normalized_token = normalize_token_asset(user.token_asset)
+    if normalized_token != user.token_asset:
+        user.token_asset = normalized_token
     db.commit()
 
     return {
@@ -270,7 +274,7 @@ def game_state(user: User = Depends(get_current_user), db: Session = Depends(get
         "player": {
             "id": user.id,
             "email": user.email or user.phone or f"user-{user.id}",
-            "token_asset": user.token_asset,
+            "token_asset": normalized_token,
             "position": state.position,
             "balance": get_player_balance(db, user.id),
             "rolls_in_current_window": state.rolls_in_window,
